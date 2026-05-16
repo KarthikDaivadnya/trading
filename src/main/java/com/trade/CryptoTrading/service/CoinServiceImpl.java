@@ -28,21 +28,28 @@ public class CoinServiceImpl implements CoinService{
 
     @Autowired
     private ObjectMapper objectMapper;
+
     @Override
     public List<Coin> getCoinList(int page) throws Exception {
-        String url = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&per_page=10&page="+page;
-        RestTemplate restTemplate = new RestTemplate();
-        try{
-            HttpHeaders headers = new HttpHeaders();
-            HttpEntity<String> entity = new HttpEntity<String>("parameters",headers);
-
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET,entity,String.class);
-            List<Coin> coinList = objectMapper.readValue(response.getBody(), new TypeReference<List<Coin>>(){});
-            return coinList;
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            throw new Exception(e.getMessage());
+    String url = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&per_page=10&page=" + page;
+    RestTemplate restTemplate = new RestTemplate();
+    try {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("accept", "application/json");
+        HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+        List<Coin> coinList = objectMapper.readValue(response.getBody(), new TypeReference<List<Coin>>() {});
+        // Save to DB so we can serve from cache next time
+        coinRepository.saveAll(coinList);
+        return coinList;
+    } catch (HttpClientErrorException e) {
+        if (e.getStatusCode().value() == 429) {
+            // Rate limited — return cached coins from DB
+            List<Coin> cached = coinRepository.findAll();
+            if (!cached.isEmpty()) return cached;
         }
-
+        throw new Exception(e.getMessage());
+        }
     }
 
     @Override
