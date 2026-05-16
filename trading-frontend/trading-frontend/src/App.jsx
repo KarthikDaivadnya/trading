@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 
-const API_BASE = "http://localhost:8090";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8090";
 
 const api = {
   post: async (path, body, token) => {
