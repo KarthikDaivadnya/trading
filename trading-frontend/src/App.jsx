@@ -283,6 +283,20 @@ function Dashboard({ user, token, onTrade, onNav }) {
   const [wallet, setWallet] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const load = async () => {
+    const res = await fetch(
+      "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=6&page=1&sparkline=false"
+    );
+    const coinsData = await res.json();
+    const normalized = coinsData.map(c => ({
+    ...c,
+    currentPrice: c.current_price,
+    priceChangePercentage24h: c.price_change_percentage_24h,
+    marketCap: c.market_cap,
+    totalVolume: c.total_volume,
+    }));
+    setCoins(normalized);
+  }
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -431,17 +445,27 @@ function MarketPage({ token, onTrade }) {
   const load = useCallback(async (p = 1) => {
   setLoading(true);
   try {
-    const data = await api.get(`/coins?page=${p}`, token);
+    // Try direct CoinGecko first
+    const res = await fetch(
+      `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=10&page=${p}&sparkline=false`
+    );
+    const data = await res.json();
     if (data && data.length > 0) {
-      setCoins(data);
+      const normalized = data.map(c => ({
+        ...c,
+        currentPrice: c.current_price,
+        priceChangePercentage24h: c.price_change_percentage_24h,
+        marketCap: c.market_cap,
+        totalVolume: c.total_volume,
+      }));
+      setCoins(normalized);
     } else {
       setCoins(MOCK_COINS);
     }
   } catch (e) {
-    // Use mock data if API is rate limited
     setCoins(MOCK_COINS);
   } finally { setLoading(false); }
-  }, [token]);
+  }, []);
 
   useEffect(() => { load(page); }, [page]);
 

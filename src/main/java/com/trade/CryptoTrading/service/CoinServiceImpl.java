@@ -35,7 +35,7 @@ public class CoinServiceImpl implements CoinService{
     RestTemplate restTemplate = new RestTemplate();
     try {
         HttpHeaders headers = new HttpHeaders();
-        headers.set("accept", "application/json");
+        headers.set("accept", "CG-HMXvotw1DZpcW9FjMfTk2oWM");
         HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
         ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
         List<Coin> coinList = objectMapper.readValue(response.getBody(), new TypeReference<List<Coin>>() {});
