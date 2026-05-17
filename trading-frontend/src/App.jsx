@@ -287,26 +287,33 @@ function Dashboard({ user, token, onTrade, onNav }) {
     const load = async () => {
       setLoading(true);
       try {
-        const [coinsData] = await Promise.all([
-        api.get("/coins?page=1", token).catch(() => MOCK_COINS),
-        ]);
-        setCoins(coinsData.slice(0, 6));
-        // Load assets and orders using user id
-        if (profileData?.id) {
+        const coinsData = await api.get("/coins?page=1", token).catch(() => MOCK_COINS);
+        setCoins((coinsData || MOCK_COINS).slice(0, 6));
+
+        let userId = user?.id || user?.userId;
+        if (!userId) {
+          const profile = await api.get("/api/users/profile", token).catch(() => null);
+          userId = profile?.id;
+        }
+
+        if (userId) {
           const [assetsData, ordersData, walletData] = await Promise.all([
-            api.get(`/api/asset/user/${profileData.id}`, token),
-            api.get(`/api/orders/user/${profileData.id}`, token),
+            api.get(`/api/asset/user/${userId}`, token),
+            api.get(`/api/orders/user/${userId}`, token),
             api.get("/api/wallet/api/wallet", token),
           ]);
           setAssets(assetsData || []);
           setOrders(ordersData || []);
           setWallet(walletData);
         }
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
     };
     load();
-  }, [token]);
+  }, [token, user]);
 
   const totalValue = assets.reduce((s, a) => s + (a.quantity * (a.coin?.currentPrice || 0)), 0);
   const walletBal = parseFloat(wallet?.balance || 0);
