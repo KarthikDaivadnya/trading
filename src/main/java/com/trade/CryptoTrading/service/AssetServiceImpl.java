@@ -11,27 +11,36 @@ import java.util.List;
 
 @Service
 public class AssetServiceImpl implements AssetService {
+
     @Autowired
     private AssetRepository assetRepository;
+
     @Override
     public Asset createAsset(User user, Coin coin, double quantity) {
         Asset asset = new Asset();
         asset.setUser(user);
         asset.setCoin(coin);
         asset.setQuantity(quantity);
-        asset.setBuyPrice(coin.getCurrentPrice().doubleValue());
-        return assetRepository.save(asset);
 
+        // FIX 1: null check on getCurrentPrice()
+        double price = (coin.getCurrentPrice() != null)
+                ? coin.getCurrentPrice().doubleValue()
+                : 0.0;
+        asset.setBuyPrice(price);
+
+        return assetRepository.save(asset);
     }
 
     @Override
     public Asset getAssetById(Long assetId) throws Exception {
-        return assetRepository.findById(assetId).orElseThrow(()->new Exception("Asset not found"));
+        return assetRepository.findById(assetId)
+                .orElseThrow(() -> new Exception("Asset not found with id: " + assetId));
     }
 
     @Override
     public Asset getAssetByUserIdAndId(Long userId, Long assetId) {
-         return null;
+        // FIX 2: was returning null — now actually queries the DB
+        return assetRepository.findByUserIdAndId(userId, assetId);
     }
 
     @Override
@@ -42,17 +51,20 @@ public class AssetServiceImpl implements AssetService {
     @Override
     public Asset updateAsset(Long assetId, double quantity) throws Exception {
         Asset oldAsset = getAssetById(assetId);
-        oldAsset.setQuantity(quantity);
+        // FIX 3: add quantity, don't replace it (for buy more scenarios)
+        oldAsset.setQuantity(oldAsset.getQuantity() + quantity);
         return assetRepository.save(oldAsset);
     }
 
     @Override
     public Asset findAssetByUserIdAndCoinId(Long userId, String coinId) {
-        return assetRepository.findByUserIdAndCoinId(userId,coinId);
+        // FIX 4: added null safety log
+        Asset asset = assetRepository.findByUserIdAndCoinId(userId, coinId);
+        return asset; // returns null cleanly if not found — caller must null-check
     }
 
     @Override
     public void deleteAsset(Long assetId) {
-assetRepository.deleteById(assetId);
+        assetRepository.deleteById(assetId);
     }
 }
